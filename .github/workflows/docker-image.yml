@@ -1,0 +1,78 @@
+name: Build and Publish Docker Image
+
+on:
+  push:
+    branches:
+      - 'main'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [noetic]
+        include:
+          - variant: noetic
+            tag: "noetic"
+            dockerfile: "Dockerfile"
+          # - variant: humble
+          #   tag: "humble"
+          #   dockerfile: "Dockerfile_humble"
+          # - variant: jazzy
+          #   tag: "jazzy"
+          #   dockerfile: "Dockerfile_jazzy"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set lowercase repository name
+        id: repo
+        run: echo "repository_owner=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ghcr.io/${{ steps.repo.outputs.repository_owner }}/m_detector:${{ matrix.tag }}
+          platforms: linux/amd64, linux/arm64
+
+      # - name: Build Docker image (no push yet)
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     file: ${{ matrix.dockerfile }}
+      #     push: false
+      #     load: true   # 
+
+      # - name: Run compile test inside container
+      #   run: |
+      #     docker run --rm \
+      #       -v $PWD:/home/ubuntu/code \
+      #       ghcr.io/${{ steps.repo.outputs.repository_owner }}/m_detector:${{ matrix.tag }} \
+      #       bash -c "cd /home/ubuntu/code && catkin_make"
+
+      # - name: Push Docker image
+      #   if: success()
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     file: ${{ matrix.dockerfile }}
+      #     push: true
+      #     tags: ghcr.io/${{ steps.repo.outputs.repository_owner }}/m_detector:${{ matrix.tag }}
+      #     platforms: linux/amd64,linux/arm64

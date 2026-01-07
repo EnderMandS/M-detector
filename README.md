@@ -1,5 +1,32 @@
 # M-detector
 
+## Quick Start with Docker
+
+### Clone repo & Get docker image
+``` shell
+git clone --depth 1 https://github.com/EnderMandS/M-detector.git
+cd M-detector
+docker run --name m_detector -itd \
+    --runtime=nvidia --gpus all \
+    --network=host --ipc=host \
+    -e ROS_DOMAIN_ID=$ROS_DOMAIN_ID \
+    -e RMW_IMPLEMENTATION=$RMW_IMPLEMENTATION \
+    -v $PWD:/home/ubuntu/code \
+    ghcr.io/endermands/m_detector:noetic
+```
+
+### Compile 
+``` shell
+docker exec -it m_detector /bin/zsh
+catkin_make
+```
+
+### Launch
+``` shell
+source devel/setup.zsh
+roslaunch m_detector 
+```
+
 ## 1.Introduction
 
 **M-detector** is a moving event detection package, which determines if a point from LiDAR is moving immediately after its arrival, resulting in a point-by-point detection with a latency of just several microseconds. M-detector is designed based on occlusion principles and can be used in different environments with various types of LiDAR sensors.
@@ -13,10 +40,6 @@ If our code is used in your project, please cite our paper.
 ### **1.2 Related video**
 
 Our accompanying videos are now available on **YouTube** (click below images to open) and [**Bilibili**](https://www.bilibili.com/video/BV1ke411i7t7/?share_source=copy_web).
-
-<div align="center">
-<a href="https://www.youtube.com/watch?v=SYaig2eHV5I" target="_blank"><img src="img/cover.bmp" alt="video" width="60%" /></a>
-</div>
 
 ### 1.3 Developers
 

@@ -1,0 +1,43 @@
+FROM ros:noetic-ros-base-focal
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=noetic
+ARG USERNAME=ubuntu
+ARG TARGETPLATFORM
+
+RUN apt update && \
+    apt install -y tree wget curl git unzip zip && \
+    if [ "$TARGETPLATFORM" = "linux/amd64" ]; then apt install -y vim; fi && \
+    apt install -y zsh && \
+    apt install -y libeigen3-dev libtbb-dev && \
+    apt install -y python3-pip python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential && \
+    apt install -y ros-${ROS_DISTRO}-cv-bridge ros-${ROS_DISTRO}-pcl-ros ros-${ROS_DISTRO}-eigen-conversions && \
+    rm -rf /var/lib/apt/lists/*
+
+# setup user
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+RUN groupadd --gid $USER_GID ${USERNAME} \
+    && useradd --uid $USER_UID --gid $USER_GID -m ${USERNAME} \
+    && echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
+    && chmod 0440 /etc/sudoers.d/${USERNAME}
+USER ${USERNAME}
+
+# zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+RUN git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions /home/${USERNAME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions && \
+    git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git /home/${USERNAME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting && \
+    sed -i 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/g' /home/${USERNAME}/.zshrc
+SHELL ["/bin/zsh", "-c"]
+
+WORKDIR /home/${USERNAME}
+RUN git clone --depth 1 --recursive https://github.com/EnderMandS/M-detector.git code && \
+    cd code && source /opt/ros/${ROS_DISTRO}/setup.sh && catkin_make
+
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.zsh" >> /home/${USERNAME}/.zshrc && \
+    echo ": 1700000000:0;catkin_make" >> /home/${USERNAME}/.zsh_history && \
+    echo ": 1700000001:0;source devel/setup.zsh" >> /home/${USERNAME}/.zsh_history
+
+WORKDIR /home/${USERNAME}/code
+
+ENTRYPOINT [ "/bin/zsh" ]
